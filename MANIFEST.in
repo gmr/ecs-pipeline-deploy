@@ -1,5 +1,2 @@
 include LICENSE
-graft docs
-graft examples
-graft requires
-graft tests
+include README.rst
