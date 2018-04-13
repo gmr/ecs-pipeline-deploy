@@ -1,0 +1,3 @@
+-r installation.txt
+nose
+flake8

@@ -1,0 +1,36 @@
+sudo: false
+language: python
+
+stages:
+- test
+- name: deploy
+  if: tag IS present
+
+install:
+- pip install -r requires/testing.txt
+
+script: nosetests
+
+jobs:
+  include:
+  - python: 3.5
+  - python: 3.6
+  - python: pypy3
+  - stage: deploy
+    if: repo IS gmr/ecs-pipeline-deploy
+    python: 3.6
+    services: []
+    install: true
+    before_script:
+    - pip install wheel
+    script: true
+    after_success: []
+    deploy:
+      provider: pypi
+      user: crad
+      distributions: sdist bdist_wheel
+      on:
+        all_branches: master
+        tags: true
+      password:
+        secure: "EqxVCeVEkqRo1OMrQ2FakbEwTlC+0SUpWK5/83pvnEzxvH60lcr363ZLE710osiORnNGu1+3tpGvxvFWIPvpZvqv3Dlw6iqorfN93hMxP1BeBPizMPPjHiwmqX06mU0VXYHaviIO0DedfCdShPAH3rDZpLDGACgU5B6iVVILuahkFx2sZ6WmhcleUPQX+PYJ4Tbk4f8PjelhgadaiUehn7Slv2TYA2AaqYhSqpRGKaeoygnLT+muGU5YuK7w3dZipoaM8waCs0FZ8wY+ljrnFHSSSuEzFPxwEXiL3j28U7J4lL1+kfS+6On5+5VFeq4rJLXuoQcnZfzLH3+296W+InK0zkZYQp58ILkoiMYiEjBx++SxW249IBS2x1XXi5mvpKZM7dG4W2SrWnsnVnnOlOrNMUcTe91QRZboXFOMVHQ/GuMx+ykofFvnGEN8F2SrEAUHc/I8y40lN4eZYdjkA1m2MQGauUz9uHXDFV9zem46yIeEozqfALe+CXihnpmLwXNo/V1u3d3BiBU7OFfxqXwMkUbc0jV1ya4v8yP3qXYNuU778iDqawSQ0AYkMdeCDRO+yD27TqsUy29Y9D9eFrrfB6sU2GAyRZgbdvngBZkJ0P8eVsWEcaJimmdlXvgVg5fhSYNuuBISmE+KiXOzuOtOM8pdTGMmPYyXr7vsb90="
