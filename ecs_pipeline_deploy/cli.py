@@ -316,7 +316,7 @@ def parse_cli_args():
 
     """
     parser = argparse.ArgumentParser(
-        prog='ecs-deploy',
+        prog='ecs-pipeline-deploy',
         description='Opinionated ECS deployment made easy',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
         conflict_handler='resolve')

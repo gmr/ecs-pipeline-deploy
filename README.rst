@@ -20,8 +20,8 @@ Usage
 -----
 .. code::
 
-    usage: ecs-deploy [-h] [-f] [-k] [-r] [-w] [-o] [-d DELAY] [-v]
-                      [CLUSTER] [SERVICE] [IMAGE]
+    usage: ecs-pipeline-deploy [-h] [-f] [-r] [-w] [-o] [-d DELAY] [-v]
+                               [CLUSTER] [SERVICE] [IMAGE]
 
     Opinionated ECS deployment made easy
 
