@@ -94,7 +94,10 @@ class ECSPipeline:
         :raises: ValueError
 
         """
-        result = IMAGE_PATTERN.match(image)
+        try:
+            result = IMAGE_PATTERN.match(image)
+        except TypeError:
+            result = None
         if not result:
             raise ValueError('Failed to parse image')
         img = result.groupdict()

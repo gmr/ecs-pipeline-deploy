@@ -20,3 +20,7 @@ class TestImageParsing(unittest.TestCase):
         for image, expectation in self.IMAGES.items():
             result = cli.ECSPipeline.parse_image(image)
             self.assertEqual(result, expectation)
+
+    def test_parsing_exceptions(self):
+        with self.assertRaises(ValueError):
+            cli.ECSPipeline.parse_image(None)
