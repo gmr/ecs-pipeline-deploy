@@ -50,7 +50,10 @@ class ECSPipeline:
             exit_application(
                 'Malformed image specified: {}'.format(args.image), 1)
         self.redeploying = False
-        self.service_arn = self._get_service_arn()
+        try:
+            self.service_arn = self._get_service_arn()
+        except self.client.exceptions.ClusterNotFoundException:
+            exit_application('Cluster not found: {}'.format(args.cluster), 1)
         self.desired_qty, self.current = self._describe_service()
         self.task_definition = self._get_task_definition()
 
@@ -94,7 +97,10 @@ class ECSPipeline:
         :raises: ValueError
 
         """
-        result = IMAGE_PATTERN.match(image)
+        try:
+            result = IMAGE_PATTERN.match(image)
+        except TypeError:
+            result = None
         if not result:
             raise ValueError('Failed to parse image')
         img = result.groupdict()
