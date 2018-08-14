@@ -179,14 +179,9 @@ class ECSPipeline:
         LOGGER.debug('Getting all of the task definitions for %s in %s',
                      self.args.service, self.args.cluster)
         definitions = []
-        response = self.client.list_task_definitions(
-            familyPrefix=family, sort='DESC')
-        definitions += response['taskDefinitionArns']
-        while response.get('nextToken'):
-            response = self.client.list_task_definitions(
-                familyPrefix=family, sort='DESC',
-                nextToken=response['nextToken'])
-            definitions += response['taskDefinitionArns']
+        paginator = self.client.get_paginator('list_task_definitions')
+        for page in paginator.paginate(familyPrefix=family, sort='DESC'):
+            definitions += page['taskDefinitionArns']
         return definitions
 
     def _list_running_tasks(self):
@@ -198,15 +193,11 @@ class ECSPipeline:
         LOGGER.debug('Getting running tasks for %s in %s',
                      self.args.service, self.args.cluster)
         taskArns = []
-        response = self.client.list_tasks(cluster=self.args.cluster,
-                                          serviceName=self.args.service,
-                                          desiredStatus='RUNNING')
-        taskArns += response['taskArns']
-        while response.get('nextToken'):
-            response = self.client.list_tasks(cluster=self.args.cluster,
-                                              serviceName=self.args.service,
-                                              desiredStatus='RUNNING')
-            taskArns += response['taskArns']
+        paginator = self.client.get_paginator('list_tasks')
+        for page in paginator.paginate(cluster=self.args.cluster,
+                                       serviceName=self.args.service,
+                                       desiredStatus='RUNNING'):
+            taskArns += page['taskArns']
 
         # Build the result set of tasks that are running
         tasks = []
@@ -267,12 +258,9 @@ class ECSPipeline:
         """
         LOGGER.debug('Getting services in the %s cluster', self.args.cluster)
         arns = []
-        response = self.client.list_services(cluster=self.args.cluster)
-        arns += response['serviceArns']
-        while response.get('nextToken'):
-            response = self.client.list_services(
-                cluster=self.args.cluster, nextToken=response['nextToken'])
-            arns += response['serviceArns']
+        paginator = self.client.get_paginator('list_services')
+        for page in paginator.paginate(cluster=self.args.cluster):
+            arns += page['serviceArns']
         return sorted(arns)
 
     def _wait_on_tasks(self):
