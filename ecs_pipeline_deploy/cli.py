@@ -138,8 +138,8 @@ class ECSPipeline:
 
         """
         for arn in self._services():
-            _prefix, service_name = arn.split('service/')
-            if service_name == self.args.service:
+            parts = arn.split('/')
+            if parts[-1] == self.args.service:
                 return arn
         exit_application(
             'Service {} not found in {}'.format(
