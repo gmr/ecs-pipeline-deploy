@@ -5,6 +5,7 @@ ECS Pipeline Deploy
 
 """
 from os import path
+
 import setuptools
 
 from ecs_pipeline_deploy import __version__
@@ -48,6 +49,9 @@ setuptools.setup(
         'Operating System :: Unix',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: Implementation :: CPython',
         'Programming Language :: Python :: Implementation :: PyPy'],
     description='An opinionated deployment application for ECS services',
