@@ -14,9 +14,11 @@ import time
 import boto3
 import coloredlogs
 
+from . import __version__
+
 LOGGER = logging.getLogger(__name__)
 
-LOGGING_FORMAT = '%(asctime)s %(message)s'
+LOGGING_FORMAT = '%(asctime)s %(name)s %(message)s'
 LOGGING_FIELD_STYLES = {
     'hostname': {'color': 'magenta'},
     'programname': {'color': 'cyan'},
@@ -59,10 +61,10 @@ class ECSPipeline:
 
     def deploy(self):
         """Deploy the task definition to the configured cluster."""
-        LOGGER.debug('%s %s in %s to %s',
-                     'Redeploying' if self.redeploying else 'Updating',
-                     self.args.service, self.args.cluster,
-                     self.task_definition.split('/')[-1])
+        LOGGER.info('%s %s in %s to %s',
+                    'Redeploying' if self.redeploying else 'Updating',
+                    self.args.service, self.args.cluster,
+                    self.task_definition.split('/')[-1])
         result = self.client.update_service(
             cluster=self.args.cluster, service=self.service_arn,
             taskDefinition=self.task_definition,
@@ -114,8 +116,8 @@ class ECSPipeline:
         :rtype: (qty, dict)
 
         """
-        LOGGER.debug('Getting the current task definition for %s in %s',
-                     self.args.service, self.args.cluster)
+        LOGGER.info('Getting the current task definition for %s in %s',
+                    self.args.service, self.args.cluster)
         response = self.client.describe_services(
             cluster=self.args.cluster, services=[self.service_arn])
         return (response['services'][0]['desiredCount'],
@@ -171,8 +173,12 @@ class ECSPipeline:
         :rtype: list
 
         """
-        return [self.parse_image(cd['image'])
+        containers = [
+            self.parse_image(cd['image'])
                 for cd in task_definition['containerDefinitions']]
+        for container in sorted(containers):
+            LOGGER.debug('Found %s in the task definition', container)
+        return sorted(containers)
 
     def _get_task_definitions_from_family(self, family):
         """Return a list of task definitions for the family sorted in
@@ -182,12 +188,16 @@ class ECSPipeline:
         :rtype: list
 
         """
-        LOGGER.debug('Getting all of the task definitions for %s in %s',
-                     self.args.service, self.args.cluster)
+        LOGGER.info('Getting all of the task definitions for %s in %s',
+                    self.args.service, self.args.cluster)
         definitions = []
         paginator = self.client.get_paginator('list_task_definitions')
         for page in paginator.paginate(familyPrefix=family, sort='DESC'):
             definitions += page['taskDefinitionArns']
+
+        for definition in sorted(definitions):
+            LOGGER.debug('Task definition %s found', definition)
+
         return definitions
 
     def _list_running_tasks(self):
@@ -196,23 +206,29 @@ class ECSPipeline:
         :rtype: [(str, str), ...]
 
         """
-        LOGGER.debug('Getting running tasks for %s in %s',
-                     self.args.service, self.args.cluster)
-        taskArns = []
+        LOGGER.info('Getting running tasks for %s in %s',
+                    self.args.service, self.args.cluster)
+        task_arns = []
         paginator = self.client.get_paginator('list_tasks')
         for page in paginator.paginate(cluster=self.args.cluster,
                                        serviceName=self.args.service,
                                        desiredStatus='RUNNING'):
-            taskArns += page['taskArns']
+            task_arns += page['taskArns']
+
+        for task_arn in sorted(task_arns):
+            LOGGER.debug('Task found: %s', task_arn)
 
         # Build the result set of tasks that are running
         tasks = []
-        while taskArns:
+        while task_arns:
             response = self.client.describe_tasks(
-                cluster=self.args.cluster, tasks=taskArns[:100])
+                cluster=self.args.cluster,
+                tasks=task_arns[:100])
             for task in response['tasks']:
+                LOGGER.debug('Task %s running %s',
+                             task['taskArn'], task['taskDefinitionArn'])
                 tasks.append((task['taskArn'], task['taskDefinitionArn']))
-                taskArns.remove(task['taskArn'])
+                task_arns.remove(task['taskArn'])
         return tasks
 
     def _modify_task_definition(self, definition):
@@ -223,8 +239,8 @@ class ECSPipeline:
         :rtype: dict
 
         """
-        LOGGER.debug('Modifying the task definition "%s" to use %s',
-                     definition['taskDefinitionArn'], self.args.image)
+        LOGGER.info('Modifying the task definition "%s" to use %s',
+                    definition['taskDefinitionArn'], self.args.image)
         for offset, image in enumerate(self._get_containers(definition)):
             if self.image.registry == image.registry and \
                     self.image.name == image.name:
@@ -237,7 +253,9 @@ class ECSPipeline:
                     log_config['options']['tag'] = \
                         options['tag'].replace(image.tag, self.image.tag)
                 return definition
-        raise ValueError('Did not find the image in the task definition')
+        raise ValueError(
+            'Did not find the image {!r} in the task definition'.format(
+                self.args.image))
 
     def _save_task_definition(self, definition):
         """Save the task definition, returning the new ARN.
@@ -262,11 +280,13 @@ class ECSPipeline:
         :rtype: list
 
         """
-        LOGGER.debug('Getting services in the %s cluster', self.args.cluster)
+        LOGGER.info('Getting services in the %s cluster', self.args.cluster)
         arns = []
         paginator = self.client.get_paginator('list_services')
         for page in paginator.paginate(cluster=self.args.cluster):
             arns += page['serviceArns']
+        for arn in sorted(arns):
+            LOGGER.debug('Returning %r', arn)
         return sorted(arns)
 
     def _wait_on_tasks(self):
@@ -337,6 +357,8 @@ def parse_cli_args():
                         help='Seconds to delay before checking tasks while '
                              'waiting on a deployment to finish')
     parser.add_argument('-v', '--verbose', action='store_true')
+    parser.add_argument('-V', '--version', action='version',
+                        version='%(prog)s {}'.format(__version__))
     return parser.parse_args()
 
 
@@ -365,6 +387,7 @@ def main():
     """Application Entrypoint"""
     args = parse_cli_args()
     configure_logging(args)
+    LOGGER.info('ecs-pipeline-deploy v%s starting', __version__)
     ECSPipeline(args).deploy()
 
 
@@ -374,5 +397,6 @@ def silence_noisy_loggers():
 
     """
     for logger in ['boto3', 'botocore',
+                   'urllib3.connectionpool',
                    'botocore.vendored.requests.packages.urllib3']:
         logging.getLogger(logger).setLevel(logging.WARNING)

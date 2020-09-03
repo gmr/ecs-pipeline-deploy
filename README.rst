@@ -20,7 +20,7 @@ Usage
 -----
 .. code::
 
-    usage: ecs-pipeline-deploy [-h] [-f] [-r] [-w] [-o] [-d DELAY] [-v]
+    usage: ecs-pipeline-deploy [-h] [-f] [-r] [-w] [-o] [-d DELAY] [-v] [-V]
                                [CLUSTER] [SERVICE] [IMAGE]
 
     Opinionated ECS deployment made easy
@@ -44,3 +44,4 @@ Usage
                             Seconds to delay before checking tasks while waiting
                             on a deployment to finish (default: 5)
       -v, --verbose
+      -V, --version         show program's version number and exit
