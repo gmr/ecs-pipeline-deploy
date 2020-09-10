@@ -166,16 +166,16 @@ class ECSPipeline:
         return self._save_task_definition(
             self._modify_task_definition(self.current))
 
-    def _get_containers(self, task_definition):
+    def _get_containers(self, task_defn):
         """Return the containers from a task definition.
 
-        :param dict task_definition: The task definition data structure
+        :param dict task_defn: The task definition data structure
         :rtype: list
 
         """
         containers = [
             self.parse_image(cd['image'])
-                for cd in task_definition['containerDefinitions']]
+            for cd in task_defn['containerDefinitions']]
         for container in sorted(containers):
             LOGGER.debug('Found %s in the task definition', container)
         return sorted(containers)
@@ -231,28 +231,33 @@ class ECSPipeline:
                 task_arns.remove(task['taskArn'])
         return tasks
 
-    def _modify_task_definition(self, definition):
+    def _modify_task_definition(self, defn):
         """Modify the task definition that was passed in, replacing the image
         appropriately with the image that is going to be tagged.
 
-        :param dict definition: The definition to modify
+        :param dict defn: The definition to modify
         :rtype: dict
 
         """
         LOGGER.info('Modifying the task definition "%s" to use %s',
-                    definition['taskDefinitionArn'], self.args.image)
-        for offset, image in enumerate(self._get_containers(definition)):
+                    defn['taskDefinitionArn'], self.args.image)
+        for idx, image in enumerate(self._get_containers(defn)):
             if self.image.registry == image.registry and \
                     self.image.name == image.name:
-                definition['containerDefinitions'][offset]['image'] = \
+                defn['containerDefinitions'][idx]['image'] = \
                     self.image_to_str(self.image)
-                log_config = definition['containerDefinitions'][offset].get(
+                log_config = defn['containerDefinitions'][idx].get(
                     'logConfiguration', {})
                 options = log_config.get('options', {})
                 if 'tag' in options:
                     log_config['options']['tag'] = \
                         options['tag'].replace(image.tag, self.image.tag)
-                return definition
+
+                environment = defn['containerDefinitions'][idx].get(
+                    'environment', {})
+                if 'version' in environment:
+                    environment['version'] = self.image.tag
+                return defn
         raise ValueError(
             'Did not find the image {!r} in the task definition'.format(
                 self.args.image))
