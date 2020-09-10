@@ -254,9 +254,13 @@ class ECSPipeline:
                         options['tag'].replace(image.tag, self.image.tag)
 
                 environment = defn['containerDefinitions'][idx].get(
-                    'environment', {})
-                if 'version' in environment:
-                    environment['version'] = self.image.tag
+                    'environment', [])
+                for offset, variable in enumerate(environment):
+                    if variable['name'] == 'VERSION':
+                        environment[offset] = {
+                            'name': 'VERSION',
+                            'value': self.image.tag
+                        }
                 return defn
         raise ValueError(
             'Did not find the image {!r} in the task definition'.format(
